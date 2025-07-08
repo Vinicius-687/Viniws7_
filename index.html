@@ -161,7 +161,7 @@
         flipSound.play();
         touchRotate = true;
       } else {
-        touchRotate = true;
+        touchRotate = false;
       }
     });
 
@@ -190,7 +190,7 @@
 
     escalaWrapper.addEventListener('touchend', () => {
       touchRotate = false;
-      dragging = true;
+      dragging = false;
       resetTransform();
     });
 
