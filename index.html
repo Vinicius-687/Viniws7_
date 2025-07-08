@@ -59,6 +59,8 @@
     }
 
     #startScreen {
+      pointer-events: auto;
+       touch-action: auto;
       position: absolute;
       inset: 0;
       background: rgba(0,0,0,0.8);
@@ -252,11 +254,27 @@ escalaWrapper.addEventListener('touchend', (e) => {
 }
 
 // Compatível com mobile e desktop
+async function iniciarConvite() {
+  try {
+    await document.documentElement.requestFullscreen?.();
+  } catch (e) {
+    console.warn("Falha ao entrar em fullscreen:", e);
+  }
+  startScreen.style.display = 'none';
+  ajustarDimensoesDoCartao();
+  isFlipped = true;
+  resetTransform();
+  flipSound.play();
+}
+
+// Compatível com toque e clique
 startScreen.addEventListener('click', iniciarConvite);
 startScreen.addEventListener('touchend', (e) => {
+  e.stopPropagation();
   e.preventDefault();
   iniciarConvite();
 }, { passive: false });
+
 
 
     btnSair.addEventListener('click', () => {
