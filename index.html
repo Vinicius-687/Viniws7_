@@ -159,7 +159,7 @@
         resetTransform();
         flipSound.currentTime = 0;
         flipSound.play();
-        touchRotate = true;
+        touchRotate = false;
       } else {
         touchRotate = false;
       }
@@ -186,10 +186,10 @@
         lastTouches = [...e.touches];
         resetTransform();
       }
-    }, { passive: false });
+    }, { passive: true });
 
     escalaWrapper.addEventListener('touchend', () => {
-      touchRotate = false;
+      touchRotate = true;
       dragging = false;
       resetTransform();
     });
