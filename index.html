@@ -189,8 +189,8 @@
     }, { passive: false });
 
     escalaWrapper.addEventListener('touchend', () => {
-      touchRotate = true;
-      dragging = false;
+      touchRotate = false;
+      dragging = true;
       resetTransform();
     });
 
