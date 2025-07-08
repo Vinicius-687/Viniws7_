@@ -153,17 +153,21 @@ return Math.sqrt(dx * dx + dy * dy);
 }
 
 // Flip com 1 toque
+let touchStartTime = 0;
+let touchStartX = 0;
+let touchStartY = 0;
+
 escalaWrapper.addEventListener('touchstart', (e) => {
 if (e.touches.length === 1) {
-isFlipped = !isFlipped;
-resetTransform();
-flipSound.currentTime = 0;
-flipSound.play();
-touchRotate = false;
-} else {
-touchRotate = true;
+touchStartTime = Date.now();
+touchStartX = e.touches[0].clientX;
+touchStartY = e.touches[0].clientY;
+lastTouches = [...e.touches];
+} else if (e.touches.length === 2) {
+lastTouches = [...e.touches];
 }
 });
+
 
 escalaWrapper.addEventListener('touchmove', (e) => {
 if (touchRotate && e.touches.length === 1) {
@@ -186,14 +190,25 @@ posY += (e.touches[0].clientY + e.touches[1].clientY - lastTouches[0].clientY - 
 lastTouches = [...e.touches];
 resetTransform();
 }
-}, { passive: true });
+}, { passive: false });
 
-escalaWrapper.addEventListener('touchend', () => {
-touchRotate = false;
-      dragging = false;
-      dragging = true;
+escalaWrapper.addEventListener('touchend', (e) => {
+if (e.touches.length === 0) {
+const timeDiff = Date.now() - touchStartTime;
+const dx = Math.abs(e.changedTouches[0].clientX - touchStartX);
+const dy = Math.abs(e.changedTouches[0].clientY - touchStartY);
+const moved = dx > 10 || dy > 10;
+
+if (!moved && timeDiff < 300) {
+// TOQUE válido para flip
+isFlipped = !isFlipped;
 resetTransform();
+flipSound.currentTime = 0;
+flipSound.play();
+}
+}
 });
+
 
 // Zoom com scroll e pinch no PC
 escalaWrapper.addEventListener('wheel', (e) => {
