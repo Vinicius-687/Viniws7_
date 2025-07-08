@@ -12,7 +12,7 @@
       background: url('https://www.motorlegend.com/modules/breve/photos/src/ferrari-250-23557-1-P.jpg') no-repeat center/cover;
       font-family: Arial, sans-serif;
       user-select: none;
-      touch-action: none;
+      touch-action: manipulation;
     }
 
     .escala-wrapper {
@@ -20,7 +20,6 @@
       inset: 0;
       display: none;
       perspective: 1000px;
-      touch-action: none;
     }
 
     .cartao {
@@ -75,29 +74,26 @@
     }
 
     #tutorial {
-  position: fixed;
-  top: 10px;
-  right: 10px;
-  background: rgba(0,0,0,0.7);
-  color: white;
-  font-size: 0.9rem;
-  padding: 10px 12px;
-  border-radius: 8px;
-  z-index: 10001;
-  line-height: 1.4;
-  max-width: 200px;
-  text-align: left;
-  pointer-events: none;
-}
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background: rgba(0,0,0,0.7);
+      color: white;
+      font-size: 0.9rem;
+      padding: 10px 12px;
+      border-radius: 8px;
+      z-index: 10001;
+      line-height: 1.4;
+      max-width: 200px;
+      text-align: left;
+      pointer-events: none;
+    }
   </style>
 </head>
 <body>
 
   <div id="startScreen">Clique para ver o Convite</div>
-
-  <div id="tutorial">
-    ➤ Deslize o dedo sobre o cartão<br>
-  </div>
+  <div id="tutorial">➤ Toque no cartão para virar<br></div>
 
   <div class="escala-wrapper" id="escalaWrapper">
     <div class="cartao" id="cartao">
@@ -118,12 +114,11 @@
 
     let isFlipped = false;
     let posX = 0, posY = 0, escalaZoom = 1;
-    let dragging = false;
     let lastTouches = [];
-    let touchRotate = false;
+    let isPinch = false;
 
     function resetTransform(rotateX = 0, rotateY = 0) {
-      const flip = isFlipped ? "rotateY(360deg)" : "rotateY(180deg)";
+      const flip = isFlipped ? "rotateY(180deg)" : "rotateY(0deg)";
       cartao.style.transform = `translate(${posX}px, ${posY}px) ${flip} scale(${escalaZoom}) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
     }
 
@@ -148,150 +143,84 @@
       img.src = cartao.querySelector('.frente').src;
     }
 
-    function getDistance(touches) {
-      const dx = touches[0].clientX - touches[1].clientX;
-      const dy = touches[0].clientY - touches[1].clientY;
-      return Math.sqrt(dx * dx + dy * dy);
-    }
+    escalaWrapper.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 2) {
+        isPinch = true;
+        lastTouches = [...e.touches];
+      }
+    }, { passive: false });
 
-    // Flip com 1 toque
-    
-    let touchStartTime = 0;
-let touchStartX = 0;
-let touchStartY = 0;
-let lastTouches = [];
-let isPinch = false;
+    escalaWrapper.addEventListener('touchmove', (e) => {
+      if (isPinch && e.touches.length === 2) {
+        e.preventDefault();
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
 
-escalaWrapper.addEventListener('touchstart', (e) => {
-  if (e.touches.length === 1) {
-    isPinch = false;
-    touchStartTime = Date.now();
-    touchStartX = e.touches[0].clientX;
-    touchStartY = e.touches[0].clientY;
-  } else if (e.touches.length === 2) {
-    isPinch = true;
-    lastTouches = [...e.touches];
-  }
-}, { passive: false });
+        const lastDx = lastTouches[0].clientX - lastTouches[1].clientX;
+        const lastDy = lastTouches[0].clientY - lastTouches[1].clientY;
+        const lastDist = Math.sqrt(lastDx * lastDx + lastDy * lastDy);
 
-escalaWrapper.addEventListener('touchmove', (e) => {
-  if (isPinch && e.touches.length === 2 && lastTouches.length === 2) {
-    e.preventDefault();
-    const currentDist = getDistance(e.touches);
-    const lastDist = getDistance(lastTouches);
-    const delta = currentDist - lastDist;
-    escalaZoom += delta * 0.005;
-    escalaZoom = Math.max(0.1, Math.min(escalaZoom, 5));
-    posX += (e.touches[0].clientX + e.touches[1].clientX - lastTouches[0].clientX - lastTouches[1].clientX) * 0.25;
-    posY += (e.touches[0].clientY + e.touches[1].clientY - lastTouches[0].clientY - lastTouches[1].clientY) * 0.25;
-    lastTouches = [...e.touches];
-    resetTransform();
-  }
-}, { passive: false });
+        const delta = dist - lastDist;
+        escalaZoom += delta * 0.005;
+        escalaZoom = Math.max(0.1, Math.min(escalaZoom, 5));
+        resetTransform();
+        lastTouches = [...e.touches];
+      }
+    }, { passive: false });
 
-escalaWrapper.addEventListener('touchend', (e) => {
-  if (!isPinch && e.touches.length === 0 && e.changedTouches.length === 1) {
-    const timeDiff = Date.now() - touchStartTime;
-    const dx = Math.abs(e.changedTouches[0].clientX - touchStartX);
-    const dy = Math.abs(e.changedTouches[0].clientY - touchStartY);
-    const moved = dx > 10 || dy > 10;
+    escalaWrapper.addEventListener('touchend', (e) => {
+      if (e.touches.length === 0 && e.changedTouches.length === 1) {
+        isFlipped = !isFlipped;
+        resetTransform();
+        flipSound.currentTime = 0;
+        flipSound.play();
+      }
+      isPinch = false;
+    });
 
-    if (!moved && timeDiff < 300) {
-      // Flip com 1 toque real
-      isFlipped = !isFlipped;
-      resetTransform();
-      flipSound.currentTime = 0;
-      flipSound.play();
-    }
-  }
-}, { passive: false });
-
-
-    // Zoom com scroll e pinch no PC
     escalaWrapper.addEventListener('wheel', (e) => {
       if (escalaWrapper.style.display !== 'block') return;
       e.preventDefault();
-      const zoomStep = e.ctrlKey || Math.abs(e.deltaX) > 0 ? e.deltaY * -0.0025 : (e.deltaY < 0 ? 0.1 : -0.1);
+      const zoomStep = e.deltaY < 0 ? 0.1 : -0.1;
       escalaZoom += zoomStep;
       escalaZoom = Math.max(0.1, Math.min(escalaZoom, 5));
       resetTransform();
     }, { passive: false });
 
-    // Efeito 3D com mouse
-    escalaWrapper.addEventListener('mousemove', (e) => {
-      if (dragging || escalaWrapper.style.display !== 'block') return;
-      const rect = cartao.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-      const centerX = rect.width / 2;
-      const centerY = rect.height / 2;
-      const rotateX = ((y - centerY) / centerY) * 10;
-      const rotateY = ((x - centerX) / centerX) * 10;
-      resetTransform(rotateX, rotateY);
+    escalaWrapper.addEventListener('click', () => {
+      isFlipped = !isFlipped;
+      resetTransform();
+      flipSound.currentTime = 0;
+      flipSound.play();
     });
-
-    escalaWrapper.addEventListener('mouseleave', () => {
-      if (escalaWrapper.style.display === 'block') resetTransform();
-    });
-
-    escalaWrapper.addEventListener('pointerup', () => {
-  if (!dragging) {
-    isFlipped = !isFlipped;
-    resetTransform();
-    flipSound.currentTime = 0;
-    flipSound.play();
-  }
-});
-
 
     async function iniciarConvite() {
-  await document.documentElement.requestFullscreen?.();
-  startScreen.style.display = 'none';
-  ajustarDimensoesDoCartao();
-  isFlipped = true;
-  resetTransform();
-  flipSound.play();
-}
+      try {
+        await document.documentElement.requestFullscreen?.();
+      } catch (e) {
+        console.warn("Fullscreen falhou", e);
+      }
 
-// Compatível com mobile e desktop
-async function iniciarConvite() {
-  try {
-    await document.documentElement.requestFullscreen?.();
-  } catch (e) {
-    console.warn("Fullscreen falhou", e);
-  }
+      startScreen.style.display = 'none';
 
-  startScreen.style.display = 'none';
+      const frente = cartao.querySelector('.frente');
+      const img = new Image();
+      img.src = frente.src;
+      img.onload = () => {
+        ajustarDimensoesDoCartao();
+        isFlipped = true;
+        resetTransform();
+        flipSound.play();
+      };
+    }
 
-  const frente = cartao.querySelector('.frente');
-  const img = new Image();
-  img.src = frente.src;
-  img.onload = () => {
-    ajustarDimensoesDoCartao();
-    isFlipped = true;
-    resetTransform();
-    flipSound.play();
-  };
-}
-
-// Compatível com toque e clique
-startScreen.addEventListener('click', iniciarConvite);
-startScreen.addEventListener('touchend', (e) => {
-  e.preventDefault();
-  e.stopPropagation();
-  iniciarConvite();
-}, { passive: false });
-
-
-// Compatível com toque e clique
-startScreen.addEventListener('click', iniciarConvite);
-startScreen.addEventListener('touchend', (e) => {
-  e.stopPropagation();
-  e.preventDefault();
-  iniciarConvite();
-}, { passive: false });
-
-
+    startScreen.addEventListener('click', iniciarConvite);
+    startScreen.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      iniciarConvite();
+    }, { passive: false });
 
     btnSair.addEventListener('click', () => {
       escalaWrapper.style.display = 'none';
