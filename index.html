@@ -258,14 +258,30 @@ async function iniciarConvite() {
   try {
     await document.documentElement.requestFullscreen?.();
   } catch (e) {
-    console.warn("Falha ao entrar em fullscreen:", e);
+    console.warn("Fullscreen falhou", e);
   }
+
   startScreen.style.display = 'none';
-  ajustarDimensoesDoCartao();
-  isFlipped = true;
-  resetTransform();
-  flipSound.play();
+
+  const frente = cartao.querySelector('.frente');
+  const img = new Image();
+  img.src = frente.src;
+  img.onload = () => {
+    ajustarDimensoesDoCartao();
+    isFlipped = true;
+    resetTransform();
+    flipSound.play();
+  };
 }
+
+// Compatível com toque e clique
+startScreen.addEventListener('click', iniciarConvite);
+startScreen.addEventListener('touchend', (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  iniciarConvite();
+}, { passive: false });
+
 
 // Compatível com toque e clique
 startScreen.addEventListener('click', iniciarConvite);
