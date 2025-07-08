@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Convite Especial</title>
+  <meta name="screen-orientation" content="landscape">
+  <meta name="orientation" content="landscape">
+  <style>
+    html, body {
+      margin: 0; padding: 0;
+      width: 100vw; height: 100vh;
+      overflow: hidden;
+      background: url('https://www.motorlegend.com/modules/breve/photos/src/ferrari-250-23557-1-P.jpg') no-repeat center/cover;
+      font-family: Arial, sans-serif;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      cursor: default;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      touch-action: none;
+      overscroll-behavior: none;
+    }
+
+    #startScreen {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      font-size: 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 2rem;
+      z-index: 9999;
+      cursor: pointer;
+      transition: opacity 0.5s ease;
+    }
+
+    #startScreen.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .escala-wrapper {
+      position: absolute;
+      inset: 0;
+      touch-action: none;
+      user-select: none;
+      display: none;
+      perspective: 1000px;
+    }
+
+    .cartao {
+      position: absolute;
+      transform-style: preserve-3d;
+      transition: transform 0.3s ease;
+      will-change: transform;
+      cursor: default;
+      border-radius: 15px;
+      overflow: visible;
+      top: 0; left: 0;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+    }
+
+    .cartao img {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      image-rendering: crisp-edges;
+      transform: rotateY(0deg);
+      border-radius: 15px;
+      pointer-events: none;
+    }
+
+    .cartao .verso {
+      transform: rotateY(180deg);
+    }
+
+    #btnSair {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: rgba(0, 0, 0, 0.75);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      padding: 10px 20px;
+      font-size: 1.2rem;
+      cursor: pointer;
+      z-index: 10000;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="startScreen">Clique para entrar em tela cheia e ver o cartão</div>
+
+  <div class="escala-wrapper" id="escalaWrapper">
+    <div class="cartao" id="cartao">
+      <img class="frente" src="https://github.com/Vinicius-687/Safra1980/blob/main/1.png?raw=true" alt="Frente" draggable="false">
+      <img class="verso" src="https://i.imgur.com/5YBPbzs.png" alt="Verso" draggable="false">
+    </div>
+  </div>
+
+  <button id="btnSair">Sair</button>
+
+  <audio id="flipSound" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_8f7dbb4e3a.mp3?filename=flip-card-1.mp3"></audio>
+
+  <script>
+    const startScreen = document.getElementById('startScreen');
+    const escalaWrapper = document.getElementById('escalaWrapper');
+    const cartao = document.getElementById('cartao');
+    const btnSair = document.getElementById('btnSair');
+    const flipSound = document.getElementById('flipSound');
+
+    let isFlipped = false;
+    let posX = 0, posY = 0, escalaZoom = 1;
+    let dragging = false;
+    let lastTouches = [];
+    let lastTapTime = 0;
+
+    function resetTransform(rotateX = 0, rotateY = 0) {
+      const flip = isFlipped ? "rotateY(180deg)" : "rotateY(360deg)";
+      cartao.style.transform = `translate(${posX}px, ${posY}px) ${flip} scale(${escalaZoom}) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+    }
+
+    function ajustarDimensoesDoCartao() {
+      const img = new Image();
+      img.onload = () => {
+        const maxW = window.innerWidth * 0.9;
+        const maxH = window.innerHeight * 0.9;
+        let w = img.width, h = img.height;
+        const ratio = w / h;
+        if (w > maxW) { w = maxW; h = w / ratio; }
+        if (h > maxH) { h = maxH; w = h * ratio; }
+        cartao.style.width = `${w}px`;
+        cartao.style.height = `${h}px`;
+        posX = (window.innerWidth - w) / 2;
+        posY = (window.innerHeight - h) / 2;
+        escalaZoom = 1;
+        escalaWrapper.style.display = 'block';
+        resetTransform();
+        btnSair.style.display = 'block';
+      };
+      img.src = cartao.querySelector('.frente').src;
+    }
+
+    function getDistance(touches) {
+      const dx = touches[0].clientX - touches[1].clientX;
+      const dy = touches[0].clientY - touches[1].clientY;
+      return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    function toggleFlip() {
+      isFlipped = !isFlipped;
+      resetTransform();
+      flipSound.currentTime = 0;
+      flipSound.play();
+    }
+
+    escalaWrapper.addEventListener('touchstart', (e) => {
+      const currentTime = new Date().getTime();
+      if (e.touches.length === 1) {
+        if (currentTime - lastTapTime < 300) {
+          toggleFlip();
+        }
+        lastTapTime = currentTime;
+        dragging = true;
+        lastTouches = [e.touches[0]];
+      } else if (e.touches.length === 2) {
+        dragging = true;
+        lastTouches = [...e.touches];
+      }
+    });
+
+    escalaWrapper.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      if (e.touches.length === 1 && dragging) {
+        const dx = e.touches[0].clientX - lastTouches[0].clientX;
+        const dy = e.touches[0].clientY - lastTouches[0].clientY;
+        posX += dx;
+        posY += dy;
+        lastTouches = [e.touches[0]];
+        resetTransform();
+      } else if (e.touches.length === 2 && lastTouches.length === 2) {
+        const currentDist = getDistance(e.touches);
+        const lastDist = getDistance(lastTouches);
+        const delta = currentDist - lastDist;
+        escalaZoom += delta * 0.005;
+        posX += (e.touches[0].clientX + e.touches[1].clientX - lastTouches[0].clientX - lastTouches[1].clientX) * 0.25;
+        posY += (e.touches[0].clientY + e.touches[1].clientY - lastTouches[0].clientY - lastTouches[1].clientY) * 0.25;
+        lastTouches = [...e.touches];
+        resetTransform();
+      }
+    }, { passive: false });
+
+    escalaWrapper.addEventListener('touchend', (e) => {
+      if (e.touches.length === 0) dragging = false;
+    });
+
+    escalaWrapper.addEventListener('pointerup', (e) => {
+      if (!dragging) toggleFlip();
+    });
+
+    startScreen.addEventListener('click', async () => {
+      await entrarEmTelaCheia();
+      startScreen.classList.add('hidden');
+      ajustarDimensoesDoCartao();
+      toggleFlip();
+    });
+
+    async function entrarEmTelaCheia() {
+      const elem = document.documentElement;
+      try {
+        if (elem.requestFullscreen) {
+          await elem.requestFullscreen();
+        } else if (elem.webkitRequestFullscreen) {
+          await elem.webkitRequestFullscreen();
+        } else if (elem.msRequestFullscreen) {
+          await elem.msRequestFullscreen();
+        }
+      } catch (err) {
+        console.warn('Erro ao entrar em tela cheia:', err);
+      }
+    }
+
+    btnSair.addEventListener('click', sairDoModoCartao);
+
+    document.addEventListener('fullscreenchange', () => {
+      if (!document.fullscreenElement) sairDoModoCartao();
+    });
+
+    function sairDoModoCartao() {
+      escalaWrapper.style.display = 'none';
+      btnSair.style.display = 'none';
+      startScreen.classList.remove('hidden');
+      isFlipped = false;
+    }
+
+    window.addEventListener('resize', () => {
+      if (escalaWrapper.style.display === 'block') ajustarDimensoesDoCartao();
+    });
+  </script>
+
+</body>
+</html>
