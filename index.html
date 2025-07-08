@@ -186,7 +186,7 @@
         lastTouches = [...e.touches];
         resetTransform();
       }
-    }, { passive: true });
+    }, { passive: false });
 
     escalaWrapper.addEventListener('touchend', () => {
       touchRotate = true;
