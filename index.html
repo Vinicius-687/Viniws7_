@@ -248,14 +248,22 @@ escalaWrapper.addEventListener('touchstart', (e) => {
       }
     });
 
-    startScreen.addEventListener('click', async () => {
-      await document.documentElement.requestFullscreen?.();
-      startScreen.style.display = 'none';
-      ajustarDimensoesDoCartao();
-      isFlipped = true;
-      resetTransform();
-      flipSound.play();
-    });
+    async function iniciarConvite() {
+  await document.documentElement.requestFullscreen?.();
+  startScreen.style.display = 'none';
+  ajustarDimensoesDoCartao();
+  isFlipped = true;
+  resetTransform();
+  flipSound.play();
+}
+
+// Compatível com mobile e desktop
+startScreen.addEventListener('click', iniciarConvite);
+startScreen.addEventListener('touchend', (e) => {
+  e.preventDefault();
+  iniciarConvite();
+}, { passive: false });
+
 
     btnSair.addEventListener('click', () => {
       escalaWrapper.style.display = 'none';
