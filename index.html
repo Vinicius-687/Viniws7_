@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>Surpresaaaa</title>
+<style>
+html, body {
+margin: 0; padding: 0;
+width: 100vw; height: 100vh;
+overflow: hidden;
+background: url('https://www.motorlegend.com/modules/breve/photos/src/ferrari-250-23557-1-P.jpg') no-repeat center/cover;
+font-family: Arial, sans-serif;
+user-select: none;
+touch-action: none;
+}
+
+.escala-wrapper {
+position: absolute;
+inset: 0;
+display: none;
+perspective: 1000px;
+touch-action: none;
+}
+
+.cartao {
+position: absolute;
+transform-style: preserve-3d;
+transition: transform 0.3s ease;
+will-change: transform;
+border-radius: 15px;
+top: 0; left: 0;
+}
+
+.cartao img {
+position: absolute;
+width: 100%; height: 100%;
+object-fit: contain;
+border-radius: 15px;
+backface-visibility: hidden;
+}
+
+.cartao .verso {
+transform: rotateY(180deg);
+}
+
+#btnSair {
+position: fixed;
+bottom: 20px;
+right: 20px;
+padding: 10px 20px;
+border-radius: 8px;
+background: rgba(0,0,0,0.7);
+color: white;
+font-size: 1rem;
+border: none;
+display: none;
+z-index: 10000;
+}
+
+#startScreen {
+position: absolute;
+inset: 0;
+background: rgba(0,0,0,0.8);
+color: white;
+display: flex;
+align-items: center;
+justify-content: center;
+font-size: 2rem;
+z-index: 9999;
+cursor: pointer;
+text-align: center;
+}
+
+#tutorial {
+position: fixed;
+top: 10px;
+right: 10px;
+background: rgba(0,0,0,0.7);
+color: white;
+font-size: 0.9rem;
+padding: 10px 12px;
+border-radius: 8px;
+z-index: 10001;
+line-height: 1.4;
+max-width: 200px;
+text-align: left;
+pointer-events: none;
+}
+</style>
+</head>
+<body>
+
+<div id="startScreen">Clique para ver o Convite</div>
+
+<div id="tutorial">
+➤ Use 1 dedo para rotacionar o cartão<br>
+➤ Use 2 dedos para dar zoom e mover o cartão<br>
+</div>
+
+<div class="escala-wrapper" id="escalaWrapper">
+<div class="cartao" id="cartao">
+<img class="frente" src="https://github.com/Vinicius-687/Safra1980/blob/main/1.png?raw=true" alt="Frente">
+<img class="verso" src="https://i.imgur.com/5YBPbzs.png" alt="Verso">
+</div>
+</div>
+
+<button id="btnSair">Sair</button>
+<audio id="flipSound" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_8f7dbb4e3a.mp3?filename=flip-card-1.mp3"></audio>
+
+<script>
+
+
+    
+    let docTitle = document.title;
+
+    window.addEventListener("blur", () => {
+      document.title = "Volte... 🥲";
+    });
+
+    window.addEventListener("focus", () => {
+      document.title = docTitle;
+    });
+const tutorial = document.getElementById('tutorial');
+const startScreen = document.getElementById('startScreen');
+const escalaWrapper = document.getElementById('escalaWrapper');
+const cartao = document.getElementById('cartao');
+const btnSair = document.getElementById('btnSair');
+const flipSound = document.getElementById('flipSound');
+
+let isFlipped = false;
+let posX = 0, posY = 0, escalaZoom = 1;
+let dragging = false;
+let lastTouches = [];
+let touchRotate = false;
+
+function resetTransform(rotateX = 0, rotateY = 0) {
+const flip = isFlipped ? "rotateY(360deg)" : "rotateY(180deg)";
+cartao.style.transform = `translate(${posX}px, ${posY}px) ${flip} scale(${escalaZoom}) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+}
+
+function atualizarTutorial() {
+    if (btnSair.classList.contains("ativo")) { 
+        tutorial.style.display = "flex"; 
+    } else {
+        tutorial.style.display = "none";
+    }
+}
+
+// Sempre chame isso quando alterar o estado do botão de sair
+atualizarTutorial();
+
+// Verifica se já foi visto
+const jaViu = localStorage.getItem("tutorial_visto");
+
+// Exibe somente se necessário
+if (!jaViu && btnSair.classList.contains("ativo")) {
+    tutorial.style.display = "flex";
+}
+
+// Ao fechar o tutorial:
+function fecharTutorial() {
+    tutorial.style.display = "none";
+    localStorage.setItem("tutorial_visto", "true");
+}
+
+function ajustarDimensoesDoCartao() {
+const img = new Image();
+img.onload = () => {
+const maxW = window.innerWidth * 0.9;
+const maxH = window.innerHeight * 0.9;
+let w = img.width, h = img.height;
+const ratio = w / h;
+if (w > maxW) { w = maxW; h = w / ratio; }
+if (h > maxH) { h = maxH; w = h * ratio; }
+cartao.style.width = `${w}px`;
+cartao.style.height = `${h}px`;
+posX = (window.innerWidth - w) / 2;
+posY = (window.innerHeight - h) / 2;
+escalaZoom = 1;
+escalaWrapper.style.display = 'block';
+btnSair.style.display = 'block';
+tutorial.style.display = 'block';
+resetTransform();
+};
+img.src = cartao.querySelector('.frente').src;
+}
+
+function getDistance(touches) {
+const dx = touches[0].clientX - touches[1].clientX;
+const dy = touches[0].clientY - touches[1].clientY;
+return Math.sqrt(dx * dx + dy * dy);
+}
+
+// Flip com 1 toque
+let touchStartTime = 0;
+let touchStartX = 0;
+let touchStartY = 0;
+
+escalaWrapper.addEventListener('touchstart', (e) => {
+if (e.touches.length === 1) {
+touchStartTime = Date.now();
+touchStartX = e.touches[0].clientX;
+touchStartY = e.touches[0].clientY;
+lastTouches = [...e.touches];
+} else if (e.touches.length === 2) {
+lastTouches = [...e.touches];
+}
+});
+
+
+escalaWrapper.addEventListener('touchmove', (e) => {
+if (touchRotate && e.touches.length === 1) {
+const rect = cartao.getBoundingClientRect();
+const x = e.touches[0].clientX - rect.left;
+const y = e.touches[0].clientY - rect.top;
+const centerX = rect.width / 2;
+const centerY = rect.height / 2;
+const rotateX = ((y - centerY) / centerY) * 10;
+const rotateY = ((x - centerX) / centerX) * 10;
+resetTransform(rotateX, rotateY);
+} else if (e.touches.length === 2 && lastTouches.length === 2) {
+const currentDist = getDistance(e.touches);
+const lastDist = getDistance(lastTouches);
+const delta = currentDist - lastDist;
+escalaZoom += delta * 0.005;
+escalaZoom = Math.max(0.1, Math.min(escalaZoom, 5));
+posX += (e.touches[0].clientX + e.touches[1].clientX - lastTouches[0].clientX - lastTouches[1].clientX) * 0.25;
+posY += (e.touches[0].clientY + e.touches[1].clientY - lastTouches[0].clientY - lastTouches[1].clientY) * 0.25;
+lastTouches = [...e.touches];
+resetTransform();
+}
+}, { passive: false });
+
+escalaWrapper.addEventListener('touchend', (e) => {
+if (e.touches.length === 0) {
+const timeDiff = Date.now() - touchStartTime;
+const dx = Math.abs(e.changedTouches[0].clientX - touchStartX);
+const dy = Math.abs(e.changedTouches[0].clientY - touchStartY);
+const moved = dx > 10 || dy > 10;
+
+if (!moved && timeDiff < 300) {
+// TOQUE válido para flip
+isFlipped = !isFlipped;
+resetTransform();
+flipSound.currentTime = 0;
+flipSound.play();
+}
+}
+});
+
+
+// Zoom com scroll e pinch no PC
+escalaWrapper.addEventListener('wheel', (e) => {
+if (escalaWrapper.style.display !== 'block') return;
+e.preventDefault();
+const zoomStep = e.ctrlKey || Math.abs(e.deltaX) > 0 ? e.deltaY * -0.0025 : (e.deltaY < 0 ? 0.1 : -0.1);
+escalaZoom += zoomStep;
+escalaZoom = Math.max(0.1, Math.min(escalaZoom, 5));
+resetTransform();
+}, { passive: false });
+
+// Efeito 3D com mouse
+let targetRotX = 0;
+let targetRotY = 0;
+let currentRotX = 0;
+let currentRotY = 0;
+let animationRunning = false;
+
+escalaWrapper.addEventListener('mousemove', (e) => {
+    if (draggingRight || escalaWrapper.style.display !== 'block') return;
+
+    const rect = cartao.getBoundingClientRect();
+
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+
+    let normX = (mouseX - centerX) / centerX;
+    let normY = (mouseY - centerY) / centerY;
+
+    const limit = 0.8;
+    normX = Math.max(-limit, Math.min(limit, normX));
+    normY = Math.max(-limit, Math.min(limit, normY));
+
+    const maxTilt = 15;
+    targetRotX = normY * maxTilt;
+    targetRotY = normX * maxTilt;
+
+    if (!animationRunning) animateRotation();
+});
+
+function animateRotation() {
+    animationRunning = true;
+
+    const smooth = 0.2; // Suavidade (0.05 ~ mais suave | 0.2 ~ mais rápido)
+
+    currentRotX += (targetRotX - currentRotX) * smooth;
+    currentRotY += (targetRotY - currentRotY) * smooth;
+
+    resetTransform(currentRotX, currentRotY);
+
+    if (Math.abs(targetRotX - currentRotX) > 0.2 || Math.abs(targetRotY - currentRotY) > 0.2) {
+        requestAnimationFrame(animateRotation);
+    } else {
+        animationRunning = false;
+    }
+}
+
+escalaWrapper.addEventListener('mouseleave', () => {
+if (escalaWrapper.style.display === 'block') resetTransform();
+});
+
+let draggingRight = false;
+let dragOffsetX = 0;
+let dragOffsetY = 0;
+let currentX = 0;
+let currentY = 0;
+
+const smooth = 0.2;
+
+escalaWrapper.addEventListener("pointerdown", (e) => {
+    if (e.button === 2) {
+        draggingRight = true;
+        dragOffsetX = e.clientX - posX;
+        dragOffsetY = e.clientY - posY;
+
+        escalaWrapper.setPointerCapture(e.pointerId);
+        e.preventDefault();
+    }
+});
+
+escalaWrapper.addEventListener("pointermove", (e) => {
+    if (!draggingRight) return;
+
+    posX = e.clientX - dragOffsetX;
+    posY = e.clientY - dragOffsetY;
+
+    resetTransform();
+});
+
+escalaWrapper.addEventListener('pointerup', (e) => {
+
+    // --- FLIP APENAS COM BOTÃO ESQUERDO ---
+    if (e.button === 0) {
+        if (!dragging) {
+            isFlipped = !isFlipped;
+            resetTransform();
+            flipSound.currentTime = 0;
+            flipSound.play();
+        }
+    }
+
+    // --- FINALIZAR ARRASTE DO BOTÃO DIREITO ---
+    if (e.button === 2) {
+        draggingRight = false;
+        try { escalaWrapper.releasePointerCapture(e.pointerId); } catch {}
+        e.preventDefault();
+    }
+
+});
+
+
+
+window.addEventListener('contextmenu', (e) => e.preventDefault());
+
+startScreen.addEventListener('click', async () => {
+await document.documentElement.requestFullscreen?.();
+startScreen.style.display = 'none';
+ajustarDimensoesDoCartao();
+isFlipped = true;
+resetTransform();
+flipSound.play();
+});
+
+btnSair.addEventListener('click', () => {
+        // sair do fullscreen caso esteja ativo
+    if (document.fullscreenElement) {
+        document.exitFullscreen();
+    };
+escalaWrapper.style.display = 'none';
+btnSair.style.display = 'none';
+tutorial.style.display = 'none';  // ← esconde o tutorial
+startScreen.style.display = 'flex';
+isFlipped = false;
+});
+
+document.addEventListener("fullscreenchange", () => {
+    if (!document.fullscreenElement) {
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                btnSair.click();
+            });
+        });
+    }
+});
+
+window.addEventListener('load', () => {
+    window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' || e.code === 'Escape') {
+            btnSair.click();
+        }
+    });
+});
+
+window.addEventListener('resize', () => {
+if (escalaWrapper.style.display === 'block') ajustarDimensoesDoCartao();
+});
+</script>
+</body>
+</html>
