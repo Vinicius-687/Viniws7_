@@ -70,6 +70,7 @@ font-size: 2rem;
 z-index: 9999;
 cursor: pointer;
 text-align: center;
+touch-action: none;
 }
 
 #tutorial {
@@ -109,6 +110,23 @@ pointer-events: none;
 <audio id="flipSound" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_8f7dbb4e3a.mp3?filename=flip-card-1.mp3"></audio>
 
 <script>
+
+    startScreen.addEventListener('pointerup', () => {
+    abrirConvite();
+});
+
+startScreen.addEventListener('pointerdown', (e) => {
+    e.preventDefault(); // garante que o pointerup funcione no mobile sem zoom ou scroll
+});
+
+function abrirConvite() {
+    startScreen.style.display = 'none';
+    escalaWrapper.style.display = 'flex';
+    btnSair.style.display = 'block';
+    tutorial.style.display = 'block';
+}
+
+
 
 
     
