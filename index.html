@@ -195,38 +195,38 @@ return Math.sqrt(dx * dx + dy * dy);
 // Flip com 1 toque
 let touchStartX = 0;
 let touchStartY = 0;
-let touchStartTime = 0;
-let movedTouch = false;
-let isSingleTouchDragging = false;
+let touchMoved = false;
+let lastTouches = [];
 
 escalaWrapper.addEventListener("touchstart", (e) => {
     if (e.touches.length === 1) {
         const t = e.touches[0];
         touchStartX = t.clientX;
         touchStartY = t.clientY;
-        touchStartTime = Date.now();
-        movedTouch = false;
-        isSingleTouchDragging = true;
+        touchMoved = false;
     }
 
     if (e.touches.length === 2) {
-        // ativa zoom e move
         lastTouches = [...e.touches];
-        isSingleTouchDragging = false;
     }
 }, { passive: false });
 
-
 escalaWrapper.addEventListener("touchmove", (e) => {
-    if (e.touches.length === 1 && isSingleTouchDragging) {
+
+    // --- 1 DEDO: ARRASTANDO O CARTÃO --- //
+    if (e.touches.length === 1) {
         const t = e.touches[0];
+
         const dx = t.clientX - touchStartX;
         const dy = t.clientY - touchStartY;
 
-        if (Math.abs(dx) > 5 || Math.abs(dy) > 5) movedTouch = true;
+        // detectar movimento real
+        if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+            touchMoved = true;
+        }
 
-        posX += dx * 0.15;
-        posY += dy * 0.15;
+        posX += dx * 0.2;
+        posY += dy * 0.2;
 
         touchStartX = t.clientX;
         touchStartY = t.clientY;
@@ -234,6 +234,7 @@ escalaWrapper.addEventListener("touchmove", (e) => {
         resetTransform();
     }
 
+    // --- 2 DEDOS: ZOOM + MOVE --- //
     if (e.touches.length === 2 && lastTouches.length === 2) {
         const currentDist = getDistance(e.touches);
         const lastDist = getDistance(lastTouches);
@@ -257,23 +258,24 @@ escalaWrapper.addEventListener("touchmove", (e) => {
         lastTouches = [...e.touches];
         resetTransform();
     }
+
 }, { passive: false });
 
 escalaWrapper.addEventListener("touchend", (e) => {
-    // Quando todos os dedos soltam
-    if (e.touches.length === 0) {
-        const dt = Date.now() - touchStartTime;
 
-        // FLIP APENAS SE: toque rápido + sem arrastar
-        if (!movedTouch && dt < 250) {
+    // se nenhum dedo restante
+    if (e.touches.length === 0) {
+
+        // --- TOQUE SEM MOVER FAZ FLIP --- //
+        if (!touchMoved) {
             isFlipped = !isFlipped;
             resetTransform();
+
             flipSound.currentTime = 0;
             flipSound.play();
         }
     }
 
-    isSingleTouchDragging = false;
 });
 
 
