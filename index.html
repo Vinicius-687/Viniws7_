@@ -135,6 +135,17 @@ let dragging = false;
 let lastTouches = [];
 let touchRotate = false;
 
+let touchMoved = false;
+let startX = 0;
+let startY = 0;
+
+function registerPointerDown(e) {
+    touchMoved = false;
+    startX = e.clientX;
+    startY = e.clientY;
+}
+
+
 /* ---------- abrir convite (handler no mobile funciona corretamente) ---------- */
 function abrirConvite() {
   // tenta fullscreen (catch para evitar erro em navegadores que bloqueiam)
@@ -375,6 +386,14 @@ escalaWrapper.addEventListener("pointerdown", (e) => {
 
         escalaWrapper.setPointerCapture(e.pointerId);
         e.preventDefault();
+    };
+    if (e.pointerType === "touch" || e.pointerType === "mouse") {
+        registerPointerDown(e);
+    }
+
+    if (e.pointerType === "mouse" && e.button === 2) {
+        draggingRight = true;
+        escalaWrapper.setPointerCapture(e.pointerId);
     }
 });
 
@@ -385,27 +404,36 @@ escalaWrapper.addEventListener("pointermove", (e) => {
     posY = e.clientY - dragOffsetY;
 
     resetTransform();
+        if (Math.abs(e.clientX - startX) > 5 || Math.abs(e.clientY - startY) > 5) {
+        touchMoved = true;
+    }
+
+    // Se 2 dedos → zoom (já funciona)
+    if (e.pointerType === "touch" && touches.size === 2) return;
+
+    // Se 1 dedo movendo → mover o cartão
+    if (e.pointerType === "touch" && touches.size === 1 && touchMoved) {
+        moveCard(e); // sua função de arrastar
+        return;
+    }
 });
 
-escalaWrapper.addEventListener('pointerup', (e) => {
+escalaWrapper.addEventListener("pointerup", (e) => {
 
-    // --- FLIP APENAS COM BOTÃO ESQUERDO ---
-    if (e.button === 0) {
-        if (!dragging) {
-            isFlipped = !isFlipped;
-            resetTransform();
-            flipSound.currentTime = 0;
-            flipSound.play();
-        }
-    }
-
-    // --- FINALIZAR ARRASTE DO BOTÃO DIREITO ---
-    if (e.button === 2) {
+    // MOUSE BOTÃO DIREITO
+    if (e.pointerType === "mouse" && e.button === 2) {
         draggingRight = false;
-        try { escalaWrapper.releasePointerCapture(e.pointerId); } catch {}
-        e.preventDefault();
+        escalaWrapper.releasePointerCapture(e.pointerId);
+        return;
     }
 
+    // TOUCH ou MOUSE: toque sem movimento → FLIP
+    if (!touchMoved) {
+        isFlipped = !isFlipped;
+        resetTransform();
+        flipSound.currentTime = 0;
+        flipSound.play();
+    }
 });
 
 
@@ -419,6 +447,14 @@ ajustarDimensoesDoCartao();
 isFlipped = true;
 resetTransform();
 flipSound.play();
+});
+
+startScreen.addEventListener("pointerdown", registerPointerDown);
+
+startScreen.addEventListener("pointerup", () => {
+    if (!touchMoved) {
+        startCard(); // sua função atual que inicia o cartão
+    }
 });
 
 btnSair.addEventListener('click', () => {
