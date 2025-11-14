@@ -221,90 +221,154 @@ img.src = cartao.querySelector('.frente').src;
 }
 
 /* ---------- touch handlers: 1 dedo move (se move), 1 dedo solta -> flip, 2 dedos -> zoom+pan ---------- */
-function getDistance(touches) {
-  const dx = touches[0].clientX - touches[1].clientX;
-  const dy = touches[0].clientY - touches[1].clientY;
-  return Math.sqrt(dx*dx + dy*dy);
-}
+/* === Pointer events unificados (PC mouse + primary touch move) === */
+let pointerStartX = 0;
+let pointerStartY = 0;
+let pointerMoved = false;
+let activePointerType = null;
 
-let touchStartX = 0, touchStartY = 0;
+escalaWrapper.addEventListener("pointerdown", (e) => {
+    activePointerType = e.pointerType;
+    pointerMoved = false;
+    pointerStartX = e.clientX;
+    pointerStartY = e.clientY;
 
-escalaWrapper.addEventListener("touchstart", (e) => {
+    // botão direito no PC ativa arraste com botão direito
+    if (e.pointerType === "mouse" && e.button === 2) {
+        draggingRight = true;
+        dragOffsetX = e.clientX - posX;
+        dragOffsetY = e.clientY - posY;
+        escalaWrapper.setPointerCapture(e.pointerId);
+        e.preventDefault();
+    }
+});
 
-    // 1 dedo agora começa como "tap" (flip possível)
-    if (e.touches.length === 1) {
-        touchMoved = false;
-        const t = e.touches[0];
-        touchStartX = t.clientX;
-        touchStartY = t.clientY;
+escalaWrapper.addEventListener("pointermove", (e) => {
+    // detecta movimento real
+    if (Math.abs(e.clientX - pointerStartX) > 5 || Math.abs(e.clientY - pointerStartY) > 5) {
+        pointerMoved = true;
     }
 
-    // 2 dedos = mover/zoom (como já era)
-    if (e.touches.length === 2) {
-        touchMoved = true; // impede flip
-        lastTouches = [...e.touches];
+    // --- PC arraste com botão direito ---
+    if (draggingRight) {
+        posX = e.clientX - dragOffsetX;
+        posY = e.clientY - dragOffsetY;
+        resetTransform();
+        return;
+    }
+
+    // --- mobile primary touch: mover como cursor quando houver movimento ---
+    if (activePointerType === "touch" && e.pointerType === "touch" && e.isPrimary && pointerMoved) {
+        posX += (e.clientX - pointerStartX);
+        posY += (e.clientY - pointerStartY);
+
+        pointerStartX = e.clientX;
+        pointerStartY = e.clientY;
+
+        resetTransform();
+        return;
+    }
+
+    // mouse move continua sendo usado para 3D tilt (não aqui)
+});
+
+escalaWrapper.addEventListener("pointerup", (e) => {
+    // botão direito (PC) solta
+    if (e.pointerType === "mouse" && e.button === 2) {
+        draggingRight = false;
+        try { escalaWrapper.releasePointerCapture(e.pointerId); } catch {}
+        return;
+    }
+
+    // se não houve movimento → é um toque curto -> flip
+    if (!pointerMoved) {
+        isFlipped = !isFlipped;
+        resetTransform();
+        flipSound.currentTime = 0;
+        flipSound.play();
+    }
+});
+
+/* ===================== MOBILE TOUCH FIXADO ===================== */
+
+let pointerStartX = 0;
+let pointerStartY = 0;
+let pointerMoved = false;
+let activePointerType = null;
+
+
+/* === Mobile touch (1 dedo mover/tilt, 1 toque sem mover = flip, 2 dedos = zoom+pan) === */
+let tStartX = 0, tStartY = 0;
+let tMoved = false;
+let tLastTouches = [];
+
+function touchDist(touches) {
+    return Math.hypot(touches[0].clientX - touches[1].clientX, touches[0].clientY - touches[1].clientY);
+}
+
+escalaWrapper.addEventListener("touchstart", (e) => {
+    if (e.touches.length === 1) {
+        tMoved = false;
+        tStartX = e.touches[0].clientX;
+        tStartY = e.touches[0].clientY;
+    } else if (e.touches.length === 2) {
+        tMoved = true; // impede flip enquanto houver multitouch
+        tLastTouches = [...e.touches];
     }
 }, { passive: false });
 
 escalaWrapper.addEventListener("touchmove", (e) => {
-
-    // === 1 dedo → movimentar / inclinar AGORA ===
     if (e.touches.length === 1) {
-
         const t = e.touches[0];
+        const dx = t.clientX - tStartX;
+        const dy = t.clientY - tStartY;
 
-        const dx = t.clientX - touchStartX;
-        const dy = t.clientY - touchStartY;
+        if (Math.abs(dx) > 5 || Math.abs(dy) > 5) tMoved = true;
 
-        if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
-            touchMoved = true; // movimento → impede flip
-        }
+        // mover soft — usa delta direto para comportar-se como cursor
+        posX += dx;
+        posY += dy;
 
-        // aplicar movimento suave como cursor
-        posX += dx * 0.22;
-        posY += dy * 0.22;
-
-        touchStartX = t.clientX;
-        touchStartY = t.clientY;
+        tStartX = t.clientX;
+        tStartY = t.clientY;
 
         resetTransform();
+        return;
     }
 
-    // === 2 dedos → zoom e pan (já estava funcionando) ===
-    if (e.touches.length === 2 && lastTouches.length === 2) {
-        touchMoved = true;
-
-        const currentDist = getDistance(e.touches);
-        const lastDist = getDistance(lastTouches);
-        const delta = currentDist - lastDist;
+    if (e.touches.length === 2 && tLastTouches.length === 2) {
+        const dNow = touchDist(e.touches);
+        const dPrev = touchDist(tLastTouches);
+        const delta = dNow - dPrev;
 
         escalaZoom += delta * 0.005;
         escalaZoom = Math.max(0.1, Math.min(escalaZoom, 5));
 
-        posX += (e.touches[0].clientX + e.touches[1].clientX
-               - lastTouches[0].clientX - lastTouches[1].clientX) * 0.25;
+        const moveX = (e.touches[0].clientX + e.touches[1].clientX) - (tLastTouches[0].clientX + tLastTouches[1].clientX);
+        const moveY = (e.touches[0].clientY + e.touches[1].clientY) - (tLastTouches[0].clientY + tLastTouches[1].clientY);
 
-        posY += (e.touches[0].clientY + e.touches[1].clientY
-               - lastTouches[0].clientY - lastTouches[1].clientY) * 0.25;
+        posX += moveX * 0.5;
+        posY += moveY * 0.5;
 
-        lastTouches = [...e.touches];
+        tLastTouches = [...e.touches];
         resetTransform();
     }
-
 }, { passive: false });
 
 escalaWrapper.addEventListener("touchend", (e) => {
+    // se ainda houver dedos, não flipar
     if (e.touches.length > 0) return;
 
-    // se houve movimento → NÃO flipar
-    if (touchMoved) return;
-
-    // se não houve movimento → flip
-    isFlipped = !isFlipped;
-    resetTransform();
-    flipSound.currentTime = 0;
-    flipSound.play();
+    // flip apenas se não houve movimento (tap)
+    if (!tMoved) {
+        isFlipped = !isFlipped;
+        resetTransform();
+        flipSound.currentTime = 0;
+        flipSound.play();
+    }
 });
+
+
 
 
 // Zoom com scroll e pinch no PC
@@ -378,84 +442,15 @@ let currentY = 0;
 
 const smooth = 0.2;
 
-escalaWrapper.addEventListener("pointerdown", (e) => {
-    if (e.button === 2) {
-        draggingRight = true;
-        dragOffsetX = e.clientX - posX;
-        dragOffsetY = e.clientY - posY;
-
-        escalaWrapper.setPointerCapture(e.pointerId);
-        e.preventDefault();
-    };
-    if (e.pointerType === "touch" || e.pointerType === "mouse") {
-        registerPointerDown(e);
-    }
-
-    if (e.pointerType === "mouse" && e.button === 2) {
-        draggingRight = true;
-        escalaWrapper.setPointerCapture(e.pointerId);
-    }
-});
-
-escalaWrapper.addEventListener("pointermove", (e) => {
-    if (!draggingRight) return;
-
-    posX = e.clientX - dragOffsetX;
-    posY = e.clientY - dragOffsetY;
-
-    resetTransform();
-        if (Math.abs(e.clientX - startX) > 5 || Math.abs(e.clientY - startY) > 5) {
-        touchMoved = true;
-    }
-
-    // Se 2 dedos → zoom (já funciona)
-    if (e.pointerType === "touch" && touches.size === 2) return;
-
-    // Se 1 dedo movendo → mover o cartão
-    if (e.pointerType === "touch" && touches.size === 1 && touchMoved) {
-        moveCard(e); // sua função de arrastar
-        return;
-    }
-});
-
-escalaWrapper.addEventListener("pointerup", (e) => {
-
-    // MOUSE BOTÃO DIREITO
-    if (e.pointerType === "mouse" && e.button === 2) {
-        draggingRight = false;
-        escalaWrapper.releasePointerCapture(e.pointerId);
-        return;
-    }
-
-    // TOUCH ou MOUSE: toque sem movimento → FLIP
-    if (!touchMoved) {
-        isFlipped = !isFlipped;
-        resetTransform();
-        flipSound.currentTime = 0;
-        flipSound.play();
-    }
-});
-
-
-
 window.addEventListener('contextmenu', (e) => e.preventDefault());
 
-startScreen.addEventListener('click', async () => {
-await document.documentElement.requestFullscreen?.();
-startScreen.style.display = 'none';
-ajustarDimensoesDoCartao();
-isFlipped = true;
-resetTransform();
-flipSound.play();
+startScreen.addEventListener("pointerdown", (e) => e.preventDefault());
+startScreen.addEventListener("pointerup", (e) => {
+    // apenas responde se não houver sido movimento significativo
+    if (Math.abs(e.clientX - startX) < 8 && Math.abs(e.clientY - startY) < 8) abrirConvite();
 });
-
 startScreen.addEventListener("pointerdown", registerPointerDown);
 
-startScreen.addEventListener("pointerup", () => {
-    if (!touchMoved) {
-        startCard(); // sua função atual que inicia o cartão
-    }
-});
 
 btnSair.addEventListener('click', () => {
         // sair do fullscreen caso esteja ativo
