@@ -5,65 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
 <title>Surpresaaaa</title>
 <style>
-html, body {
-  margin: 0; padding: 0;
-  width: 100vw; height: 100vh;
-  overflow: hidden;
-  background: url('https://www.motorlegend.com/modules/breve/photos/src/ferrari-250-23557-1-P.jpg') no-repeat center/cover;
-  font-family: Arial, sans-serif;
-  user-select: none;
-  touch-action: none;
-}
-
-.escala-wrapper {
-  position: absolute;
-  inset: 0;
-  display: none;
-  perspective: 1000px;
-  touch-action: none;
-}
-
-.cartao {
-  position: absolute;
-  transform-style: preserve-3d;
-  transition: transform 0.18s ease;
-  will-change: transform;
-  border-radius: 15px;
-  top: 0; left: 0;
-}
-
-.cartao img {
-  position: absolute;
-  width: 100%; height: 100%;
-  object-fit: contain;
-  border-radius: 15px;
-  backface-visibility: hidden;
-}
-
-.cartao .verso { transform: rotateY(180deg); }
-
-#btnSair {
-  position: fixed; bottom: 20px; right: 20px;
-  padding: 10px 20px; border-radius: 8px;
-  background: rgba(0,0,0,0.7); color: white;
-  font-size: 1rem; border: none; display: none; z-index: 10000;
-}
-
-#startScreen {
-  position: absolute; inset: 0;
-  background: rgba(0,0,0,0.8); color: white;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 2rem; z-index: 9999; cursor: pointer;
-  text-align: center; touch-action: manipulation;
-}
-
-#tutorial {
-  position: fixed; top: 10px; right: 10px;
-  background: rgba(0,0,0,0.7); color: white;
-  font-size: 0.9rem; padding: 10px 12px; border-radius: 8px;
-  z-index: 10001; line-height: 1.4; max-width: 200px;
-  text-align: left; pointer-events: none;
-}
+html, body { margin:0; padding:0; width:100vw; height:100vh; overflow:hidden;
+  background:url('https://www.motorlegend.com/modules/breve/photos/src/ferrari-250-23557-1-P.jpg') no-repeat center/cover;
+  font-family:Arial,sans-serif; user-select:none; touch-action:none; }
+.escala-wrapper { position:absolute; inset:0; display:none; perspective:1000px; touch-action:none; }
+.cartao { position:absolute; transform-style:preserve-3d; transition:transform 0.18s ease; will-change:transform;
+  border-radius:15px; top:0; left:0; }
+.cartao img { position:absolute; width:100%; height:100%; object-fit:contain; border-radius:15px; backface-visibility:hidden; }
+.cartao .verso { transform:rotateY(180deg); }
+#btnSair { position:fixed; bottom:20px; right:20px; padding:10px 20px; border-radius:8px; background:rgba(0,0,0,0.7);
+  color:white; font-size:1rem; border:none; display:none; z-index:10000; }
+#startScreen { position:absolute; inset:0; background:rgba(0,0,0,0.8); color:white; display:flex; align-items:center;
+  justify-content:center; font-size:2rem; z-index:9999; cursor:pointer; text-align:center; touch-action:manipulation; }
+#tutorial { position:fixed; top:10px; right:10px; background:rgba(0,0,0,0.7); color:white; font-size:0.9rem; padding:10px 12px;
+  border-radius:8px; z-index:10001; line-height:1.4; max-width:200px; text-align:left; pointer-events:none; }
 </style>
 </head>
 <body>
@@ -86,7 +41,6 @@ html, body {
 <audio id="flipSound" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_8f7dbb4e3a.mp3?filename=flip-card-1.mp3"></audio>
 
 <script>
-/* ==================== VARS ==================== */
 const tutorial = document.getElementById('tutorial');
 const startScreen = document.getElementById('startScreen');
 const escalaWrapper = document.getElementById('escalaWrapper');
@@ -97,276 +51,156 @@ const flipSound = document.getElementById('flipSound');
 let isFlipped = false;
 let posX = 0, posY = 0, escalaZoom = 1;
 
-let draggingRight = false;
-let dragOffsetX = 0, dragOffsetY = 0;
+let draggingRight = false, dragOffsetX = 0, dragOffsetY = 0;
 
-/* ==================== UTIL / LAYOUT ==================== */
-function resetTransform(rotateX = 0, rotateY = 0) {
+/* layout */
+function resetTransform(rx=0, ry=0){
   const flip = isFlipped ? "rotateY(360deg)" : "rotateY(180deg)";
-  cartao.style.transform = `translate(${posX}px, ${posY}px) ${flip} scale(${escalaZoom}) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+  cartao.style.transform = `translate(${posX}px, ${posY}px) ${flip} scale(${escalaZoom}) rotateX(${rx}deg) rotateY(${ry}deg)`;
 }
-
-function ajustarDimensoesDoCartao() {
+function ajustarDimensoesDoCartao(){
   const img = new Image();
-  img.onload = () => {
-    const maxW = window.innerWidth * 0.9;
-    const maxH = window.innerHeight * 0.9;
-    let w = img.width, h = img.height;
-    const ratio = w / h;
-    if (w > maxW) { w = maxW; h = w / ratio; }
-    if (h > maxH) { h = maxH; w = h * ratio; }
-    cartao.style.width = `${w}px`;
-    cartao.style.height = `${h}px`;
-    posX = (window.innerWidth - w) / 2;
-    posY = (window.innerHeight - h) / 2;
-    escalaZoom = 1;
-    escalaWrapper.style.display = 'block';
-    btnSair.style.display = 'block';
-    tutorial.style.display = 'block';
+  img.onload = ()=>{
+    const maxW = innerWidth * 0.9, maxH = innerHeight * 0.9;
+    let w = img.width, h = img.height, ratio = w/h;
+    if (w > maxW) { w = maxW; h = w/ratio; }
+    if (h > maxH) { h = maxH; w = h*ratio; }
+    cartao.style.width = w+'px'; cartao.style.height = h+'px';
+    posX = (innerWidth - w)/2; posY = (innerHeight - h)/2; escalaZoom = 1;
+    escalaWrapper.style.display = 'block'; btnSair.style.display='block'; tutorial.style.display='block';
     resetTransform();
   };
   img.src = cartao.querySelector('.frente').src;
 }
 
-/* ==================== STARTSCREEN handlers ==================== */
-let startDownX = 0, startDownY = 0;
-function registerStartPointerDown(e) {
-  startDownX = e.clientX;
-  startDownY = e.clientY;
-}
-startScreen.addEventListener('pointerdown', (e) => {
-  e.preventDefault(); // evita interpretar como gesto
-  registerStartPointerDown(e);
-});
-startScreen.addEventListener('pointerup', (e) => {
-  // só abre se for toque curto (não arraste)
-  if (Math.abs(e.clientX - startDownX) < 8 && Math.abs(e.clientY - startDownY) < 8) {
+/* startScreen: abre somente em toque curto */
+let startDownX=0, startDownY=0;
+startScreen.addEventListener('pointerdown', e=>{ e.preventDefault(); startDownX=e.clientX; startDownY=e.clientY; });
+startScreen.addEventListener('pointerup', e=>{
+  if (Math.abs(e.clientX - startDownX) < 8 && Math.abs(e.clientY - startDownY) < 8){
     abrirConvite();
   }
 });
-
-/* abre convite */
-function abrirConvite() {
+function abrirConvite(){
   document.documentElement.requestFullscreen?.().catch(()=>{});
-  startScreen.style.display = 'none';
-  ajustarDimensoesDoCartao();
-  isFlipped = true;
-  resetTransform();
-  flipSound.currentTime = 0;
-  flipSound.play();
+  startScreen.style.display='none'; ajustarDimensoesDoCartao(); isFlipped=true; resetTransform();
+  flipSound.currentTime=0; flipSound.play();
 }
 
-/* ==================== POINTER (mouse + primary touch) ==================== */
-/* Lida com: - mouse right-drag; - primary touch move (soft cursor-like); - tap -> flip */
-let pStartX = 0, pStartY = 0;
-let pMoved = false;
-let activePointerType = null;
+/* detecta ambiente touch */
+const isTouch = 'ontouchstart' in window;
 
-escalaWrapper.addEventListener('pointerdown', (e) => {
-  activePointerType = e.pointerType;
-  pMoved = false;
-  pStartX = e.clientX;
-  pStartY = e.clientY;
+/* ---------- se for touch: usamos touch handlers (mobile) ---------- */
+if (isTouch){
+  let tStartX=0, tStartY=0, tMoved=false, tLastTouches=[];
+  function touchDist(t){ return Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY); }
 
-  if (e.pointerType === 'mouse' && e.button === 2) {
-    draggingRight = true;
-    dragOffsetX = e.clientX - posX;
-    dragOffsetY = e.clientY - posY;
-    try { escalaWrapper.setPointerCapture(e.pointerId); } catch {}
-    e.preventDefault();
-  }
-});
-
-escalaWrapper.addEventListener('pointermove', (e) => {
-  if (Math.abs(e.clientX - pStartX) > 5 || Math.abs(e.clientY - pStartY) > 5) pMoved = true;
-
-  // right-button drag on desktop
-  if (draggingRight) {
-    posX = e.clientX - dragOffsetX;
-    posY = e.clientY - dragOffsetY;
-    resetTransform();
-    return;
-  }
-
-  // primary touch as cursor (only when pointer events are used as primary)
-  if (activePointerType === 'touch' && e.pointerType === 'touch' && e.isPrimary && pMoved) {
-    posX += (e.clientX - pStartX);
-    posY += (e.clientY - pStartY);
-    pStartX = e.clientX;
-    pStartY = e.clientY;
-    resetTransform();
-    return;
-  }
-});
-
-escalaWrapper.addEventListener('pointerup', (e) => {
-  if (e.pointerType === 'mouse' && e.button === 2) {
-    draggingRight = false;
-    try { escalaWrapper.releasePointerCapture(e.pointerId); } catch {}
-    return;
-  }
-  // tap without movement -> flip
-  if (!pMoved) {
-    isFlipped = !isFlipped;
-    resetTransform();
-    flipSound.currentTime = 0;
-    flipSound.play();
-  }
-});
-
-/* bloqueia menu do botão direito */
-window.addEventListener('contextmenu', (ev) => ev.preventDefault());
-
-/* ==================== TOUCH (multitouch + single-finger move) ==================== */
-/* 1 finger move = translate like cursor (uses delta) */
-/* tap (no move) = flip */
-/* 2 fingers = zoom + pan */
-let tStartX = 0, tStartY = 0;
-let tMoved = false;
-let tLastTouches = [];
-
-function touchDist(t) {
-  return Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
-}
-
-escalaWrapper.addEventListener('touchstart', (e) => {
-  if (e.touches.length === 1) {
-    tMoved = false;
-    tStartX = e.touches[0].clientX;
-    tStartY = e.touches[0].clientY;
-  } else if (e.touches.length === 2) {
-    tMoved = true; // while multitouch, don't consider as tap
-    tLastTouches = [...e.touches];
-  }
-}, { passive: false });
-
-escalaWrapper.addEventListener('touchmove', (e) => {
-  if (e.touches.length === 1) {
-    const t = e.touches[0];
-    const dx = t.clientX - tStartX;
-    const dy = t.clientY - tStartY;
-    if (Math.abs(dx) > 5 || Math.abs(dy) > 5) tMoved = true;
-    posX += dx;
-    posY += dy;
-    tStartX = t.clientX;
-    tStartY = t.clientY;
-    resetTransform();
-    return;
-  }
-
-  if (e.touches.length === 2 && tLastTouches.length === 2) {
-    const dNow = touchDist(e.touches);
-    const dPrev = touchDist(tLastTouches);
-    const delta = dNow - dPrev;
-    escalaZoom += delta * 0.005;
-    escalaZoom = Math.max(0.1, Math.min(escalaZoom, 5));
-
-    const moveX = (e.touches[0].clientX + e.touches[1].clientX) - (tLastTouches[0].clientX + tLastTouches[1].clientX);
-    const moveY = (e.touches[0].clientY + e.touches[1].clientY) - (tLastTouches[0].clientY + tLastTouches[1].clientY);
-
-    posX += moveX * 0.5;
-    posY += moveY * 0.5;
-
-    tLastTouches = [...e.touches];
-    resetTransform();
-  }
-}, { passive: false });
-
-escalaWrapper.addEventListener('touchend', (e) => {
-  if (e.touches.length > 0) return; // ainda tem dedos
-  if (!tMoved) {
-    isFlipped = !isFlipped;
-    resetTransform();
-    flipSound.currentTime = 0;
-    flipSound.play();
-  }
-});
-
-/* ==================== MOUSE 3D TILT (desktop cursor) ==================== */
-let targetRotX = 0, targetRotY = 0, currentRotX = 0, currentRotY = 0;
-let animationRunning = false;
-
-escalaWrapper.addEventListener('mousemove', (e) => {
-  if (draggingRight || escalaWrapper.style.display !== 'block') return;
-
-  const rect = cartao.getBoundingClientRect();
-  const mouseX = e.clientX - rect.left;
-  const mouseY = e.clientY - rect.top;
-  const centerX = rect.width / 2;
-  const centerY = rect.height / 2;
-
-  let normX = (mouseX - centerX) / centerX;
-  let normY = (mouseY - centerY) / centerY;
-
-  const limit = 0.8;
-  normX = Math.max(-limit, Math.min(limit, normX));
-  normY = Math.max(-limit, Math.min(limit, normY));
-
-  const maxTilt = 15;
-  targetRotX = normY * maxTilt;
-  targetRotY = normX * maxTilt;
-
-  if (!animationRunning) animateRotation();
-});
-
-function animateRotation() {
-  animationRunning = true;
-  const smooth = 0.18;
-  currentRotX += (targetRotX - currentRotX) * smooth;
-  currentRotY += (targetRotY - currentRotY) * smooth;
-  resetTransform(currentRotX, currentRotY);
-  if (Math.abs(targetRotX - currentRotX) > 0.2 || Math.abs(targetRotY - currentRotY) > 0.2) {
-    requestAnimationFrame(animateRotation);
-  } else {
-    animationRunning = false;
-  }
-}
-
-escalaWrapper.addEventListener('mouseleave', () => {
-  if (escalaWrapper.style.display === 'block') resetTransform();
-});
-
-/* ==================== WHEEL (zoom desktop) ==================== */
-escalaWrapper.addEventListener('wheel', (e) => {
-  if (escalaWrapper.style.display !== 'block') return;
-  e.preventDefault();
-  const zoomStep = (e.ctrlKey || Math.abs(e.deltaX) > 0) ? e.deltaY * -0.0025 : (e.deltaY < 0 ? 0.1 : -0.1);
-  escalaZoom += zoomStep;
-  escalaZoom = Math.max(0.1, Math.min(escalaZoom, 5));
-  resetTransform();
-}, { passive: false });
-
-/* ==================== BTN SAIR / FULLSCREEN ==================== */
-btnSair.addEventListener('click', () => {
-  if (document.fullscreenElement) document.exitFullscreen();
-  escalaWrapper.style.display = 'none';
-  btnSair.style.display = 'none';
-  tutorial.style.display = 'none';
-  startScreen.style.display = 'flex';
-  isFlipped = false;
-});
-
-document.addEventListener('fullscreenchange', () => {
-  if (!document.fullscreenElement) {
-    // garantir estado fechado
-    btnSair.click();
-  }
-});
-
-/* ==================== TECLA ESC SÓ PARA FECHAR (quando ativo) ==================== */
-window.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' || e.code === 'Escape') {
-    if (escalaWrapper.style.display === 'block') {
-      // se está em fullscreen, exit primeiro - logic: btnSair already does both
-      btnSair.click();
+  escalaWrapper.addEventListener('touchstart', e=>{
+    if (e.touches.length===1){
+      tMoved=false; tStartX = e.touches[0].clientX; tStartY = e.touches[0].clientY;
+    } else if (e.touches.length===2){
+      tMoved=true; tLastTouches=[...e.touches];
     }
-  }
-});
+  }, { passive:false });
 
-/* ==================== resize ==================== */
-window.addEventListener('resize', () => {
-  if (escalaWrapper.style.display === 'block') ajustarDimensoesDoCartao();
+  escalaWrapper.addEventListener('touchmove', e=>{
+    if (e.touches.length===1){
+      const t = e.touches[0];
+      const dx = t.clientX - tStartX, dy = t.clientY - tStartY;
+      if (Math.abs(dx) > 5 || Math.abs(dy) > 5) tMoved = true;
+      posX += dx; posY += dy;
+      tStartX = t.clientX; tStartY = t.clientY;
+      resetTransform(); return;
+    }
+    if (e.touches.length===2 && tLastTouches.length===2){
+      const dNow = touchDist(e.touches), dPrev = touchDist(tLastTouches), delta = dNow - dPrev;
+      escalaZoom += delta * 0.005; escalaZoom = Math.max(0.1, Math.min(escalaZoom,5));
+      const moveX = (e.touches[0].clientX + e.touches[1].clientX) - (tLastTouches[0].clientX + tLastTouches[1].clientX);
+      const moveY = (e.touches[0].clientY + e.touches[1].clientY) - (tLastTouches[0].clientY + tLastTouches[1].clientY);
+      posX += moveX*0.5; posY += moveY*0.5;
+      tLastTouches = [...e.touches]; resetTransform();
+    }
+  }, { passive:false });
+
+  escalaWrapper.addEventListener('touchend', e=>{
+    if (e.touches.length > 0) return; // ainda tem dedos
+    if (!tMoved){ isFlipped = !isFlipped; resetTransform(); flipSound.currentTime=0; flipSound.play(); }
+  });
+
+} else {
+  /* ---------- desktop: pointer + mouse handlers ---------- */
+  let pStartX=0, pStartY=0, pMoved=false, activePointerType=null;
+  escalaWrapper.addEventListener('pointerdown', e=>{
+    activePointerType = e.pointerType;
+    pMoved = false; pStartX = e.clientX; pStartY = e.clientY;
+    if (e.pointerType === 'mouse' && e.button === 2){
+      draggingRight = true; dragOffsetX = e.clientX - posX; dragOffsetY = e.clientY - posY;
+      try { escalaWrapper.setPointerCapture(e.pointerId); } catch {}
+      e.preventDefault();
+    }
+  });
+
+  escalaWrapper.addEventListener('pointermove', e=>{
+    if (Math.abs(e.clientX - pStartX) > 5 || Math.abs(e.clientY - pStartY) > 5) pMoved = true;
+    if (draggingRight){ posX = e.clientX - dragOffsetX; posY = e.clientY - dragOffsetY; resetTransform(); return; }
+    // primary mouse movement doesn't translate the card; mouse tilt handled by mousemove below
+  });
+
+  escalaWrapper.addEventListener('pointerup', e=>{
+    if (e.pointerType==='mouse' && e.button===2){ draggingRight=false; try{escalaWrapper.releasePointerCapture(e.pointerId)}catch{}; return; }
+    if (!pMoved){ isFlipped = !isFlipped; resetTransform(); flipSound.currentTime=0; flipSound.play(); }
+  });
+
+  /* mouse tilt & wheel */
+  escalaWrapper.addEventListener('mousemove', e=>{
+    if (draggingRight || escalaWrapper.style.display !== 'block') return;
+    const rect = cartao.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left, mouseY = e.clientY - rect.top;
+    const centerX = rect.width/2, centerY = rect.height/2;
+    let normX = (mouseX - centerX)/centerX, normY = (mouseY - centerY)/centerY;
+    const limit = 0.8; normX = Math.max(-limit, Math.min(limit, normX)); normY = Math.max(-limit, Math.min(limit, normY));
+    const maxTilt = 15;
+    // suavizado simples:
+    targetRotX = normY * maxTilt; targetRotY = normX * maxTilt;
+    if (!animationRunning) animateRotation();
+  });
+
+  escalaWrapper.addEventListener('wheel', e=>{
+    if (escalaWrapper.style.display !== 'block') return; e.preventDefault();
+    const zoomStep = (e.ctrlKey || Math.abs(e.deltaX) > 0) ? e.deltaY * -0.0025 : (e.deltaY < 0 ? 0.1 : -0.1);
+    escalaZoom += zoomStep; escalaZoom = Math.max(0.1, Math.min(escalaZoom, 5)); resetTransform();
+  }, { passive:false });
+
+  // mouse tilt animation helpers (kept for desktop)
+  var targetRotX=0, targetRotY=0, currentRotX=0, currentRotY=0, animationRunning=false;
+  function animateRotation(){
+    animationRunning = true;
+    const smooth = 0.18;
+    currentRotX += (targetRotX - currentRotX)*smooth;
+    currentRotY += (targetRotY - currentRotY)*smooth;
+    resetTransform(currentRotX, currentRotY);
+    if (Math.abs(targetRotX - currentRotX) > 0.2 || Math.abs(targetRotY - currentRotY) > 0.2){
+      requestAnimationFrame(animateRotation);
+    } else animationRunning = false;
+  }
+}
+
+/* bloqueia menu do botão direito globalmente */
+window.addEventListener('contextmenu', (e)=> e.preventDefault());
+
+/* Sair / fullscreen handling */
+btnSair.addEventListener('click', ()=>{
+  if (document.fullscreenElement) document.exitFullscreen();
+  escalaWrapper.style.display='none'; btnSair.style.display='none'; tutorial.style.display='none';
+  startScreen.style.display='flex'; isFlipped=false;
 });
+document.addEventListener('fullscreenchange', ()=>{ if (!document.fullscreenElement) btnSair.click(); });
+
+/* ESC key to close when open */
+window.addEventListener('keydown', e=>{ if ((e.key==='Escape' || e.code==='Escape') && escalaWrapper.style.display==='block') btnSair.click(); });
+
+/* resize */
+window.addEventListener('resize', ()=>{ if (escalaWrapper.style.display==='block') ajustarDimensoesDoCartao(); });
 
 </script>
 </body>
