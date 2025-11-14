@@ -34,6 +34,17 @@
 <audio id="flipSound" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_8f7dbb4e3a.mp3?filename=flip-card-1.mp3"></audio>
 
 <script>
+
+        let docTitle = document.title;
+
+    window.addEventListener("blur", () => {
+      document.title = "Volte... 🥲";
+    });
+
+    window.addEventListener("focus", () => {
+      document.title = docTitle;
+    });
+
 /* ---------- elementos ---------- */
 const startScreen = document.getElementById('startScreen');
 const escalaWrapper = document.getElementById('escalaWrapper');
@@ -41,6 +52,19 @@ const cartao = document.getElementById('cartao');
 const btnSair = document.getElementById('btnSair');
 const tutorial = document.getElementById('tutorial');
 const flipSound = document.getElementById('flipSound');
+
+/* ---------- Tutorial ---------- */
+function atualizarTutorial() {
+    if (btnSair.classList.contains("ativo")) { 
+        tutorial.style.display = "flex"; 
+    } else {
+        tutorial.style.display = "none";
+    }
+}
+
+// Sempre chame isso quando alterar o estado do botão de sair
+atualizarTutorial();
+
 
 /* ---------- estado ---------- */
 let isFlipped = false;
