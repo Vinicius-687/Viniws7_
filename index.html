@@ -193,59 +193,87 @@ return Math.sqrt(dx * dx + dy * dy);
 }
 
 // Flip com 1 toque
-let touchStartTime = 0;
 let touchStartX = 0;
 let touchStartY = 0;
+let touchStartTime = 0;
+let movedTouch = false;
+let isSingleTouchDragging = false;
 
-escalaWrapper.addEventListener('touchstart', (e) => {
-  if (e.touches.length === 1) {
-    touchStartTime = Date.now();
-    touchStartX = e.touches[0].clientX;
-    touchStartY = e.touches[0].clientY;
-    lastTouches = [...e.touches];
-  } else if (e.touches.length === 2) {
-    lastTouches = [...e.touches];
-  }
-});
+escalaWrapper.addEventListener("touchstart", (e) => {
+    if (e.touches.length === 1) {
+        const t = e.touches[0];
+        touchStartX = t.clientX;
+        touchStartY = t.clientY;
+        touchStartTime = Date.now();
+        movedTouch = false;
+        isSingleTouchDragging = true;
+    }
 
-
-escalaWrapper.addEventListener('touchmove', (e) => {
-  if (touchRotate && e.touches.length === 1) {
-    const rect = cartao.getBoundingClientRect();
-    const x = e.touches[0].clientX - rect.left;
-    const y = e.touches[0].clientY - rect.top;
-    const centerX = rect.width / 2;
-    const centerY = rect.height / 2;
-    const rotateX = ((y - centerY) / centerY) * 10;
-    const rotateY = ((x - centerX) / centerX) * 10;
-    resetTransform(rotateX, rotateY);
-  } else if (e.touches.length === 2 && lastTouches.length === 2) {
-    const currentDist = getDistance(e.touches);
-    const lastDist = getDistance(lastTouches);
-    const delta = currentDist - lastDist;
-    escalaZoom += delta * 0.005;
-    escalaZoom = Math.max(0.1, Math.min(escalaZoom, 5));
-    posX += (e.touches[0].clientX + e.touches[1].clientX - lastTouches[0].clientX - lastTouches[1].clientX) * 0.25;
-    posY += (e.touches[0].clientY + e.touches[1].clientY - lastTouches[0].clientY - lastTouches[1].clientY) * 0.25;
-    lastTouches = [...e.touches];
-    resetTransform();
-  }
+    if (e.touches.length === 2) {
+        // ativa zoom e move
+        lastTouches = [...e.touches];
+        isSingleTouchDragging = false;
+    }
 }, { passive: false });
 
-escalaWrapper.addEventListener('touchend', (e) => {
-  if (e.touches.length === 0) {
-    const timeDiff = Date.now() - touchStartTime;
-    const dx = Math.abs(e.changedTouches[0].clientX - touchStartX);
-    const dy = Math.abs(e.changedTouches[0].clientY - touchStartY);
-    const moved = dx > 10 || dy > 10;
-    if (!moved && timeDiff < 300) {
-      // flip: usa o ponto do toque para origem do transform
-      const rect = cartao.getBoundingClientRect();
-      const x = e.changedTouches[0].clientX - rect.left;
-      const y = e.changedTouches[0].clientY - rect.top;
-      applyFlipOriginAndFlip(x, y);
+
+escalaWrapper.addEventListener("touchmove", (e) => {
+    if (e.touches.length === 1 && isSingleTouchDragging) {
+        const t = e.touches[0];
+        const dx = t.clientX - touchStartX;
+        const dy = t.clientY - touchStartY;
+
+        if (Math.abs(dx) > 5 || Math.abs(dy) > 5) movedTouch = true;
+
+        posX += dx * 0.15;
+        posY += dy * 0.15;
+
+        touchStartX = t.clientX;
+        touchStartY = t.clientY;
+
+        resetTransform();
     }
-  }
+
+    if (e.touches.length === 2 && lastTouches.length === 2) {
+        const currentDist = getDistance(e.touches);
+        const lastDist = getDistance(lastTouches);
+        const delta = currentDist - lastDist;
+
+        escalaZoom += delta * 0.005;
+        escalaZoom = Math.max(0.1, Math.min(escalaZoom, 5));
+
+        posX +=
+            (e.touches[0].clientX +
+                e.touches[1].clientX -
+                lastTouches[0].clientX -
+                lastTouches[1].clientX) * 0.25;
+
+        posY +=
+            (e.touches[0].clientY +
+                e.touches[1].clientY -
+                lastTouches[0].clientY -
+                lastTouches[1].clientY) * 0.25;
+
+        lastTouches = [...e.touches];
+        resetTransform();
+    }
+}, { passive: false });
+
+escalaWrapper.addEventListener("touchend", (e) => {
+    // Quando todos os dedos soltam
+    if (e.touches.length === 0) {
+        const dt = Date.now() - touchStartTime;
+
+        // FLIP APENAS SE: toque rápido + sem arrastar
+        if (!movedTouch && dt < 250) {
+            isFlipped = !isFlipped;
+            resetTransform();
+            flipSound.currentTime = 0;
+            flipSound.play();
+        }
+    }
+
+    isSingleTouchDragging = false;
 });
 
 
