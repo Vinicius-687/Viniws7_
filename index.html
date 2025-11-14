@@ -111,23 +111,6 @@ pointer-events: none;
 
 <script>
 
-    startScreen.addEventListener('pointerup', () => {
-    abrirConvite();
-});
-
-startScreen.addEventListener('pointerdown', (e) => {
-    e.preventDefault(); // garante que o pointerup funcione no mobile sem zoom ou scroll
-});
-
-function abrirConvite() {
-    startScreen.style.display = 'none';
-    escalaWrapper.style.display = 'flex';
-    btnSair.style.display = 'block';
-    tutorial.style.display = 'block';
-}
-
-
-
 
     
     let docTitle = document.title;
@@ -151,6 +134,28 @@ let posX = 0, posY = 0, escalaZoom = 1;
 let dragging = false;
 let lastTouches = [];
 let touchRotate = false;
+
+/* ---------- abrir convite (handler no mobile funciona corretamente) ---------- */
+function abrirConvite() {
+  // tenta fullscreen (catch para evitar erro em navegadores que bloqueiam)
+  document.documentElement.requestFullscreen?.().catch(()=>{});
+  startScreen.style.display = 'none';
+  escalaWrapper.style.display = 'flex';
+  btnSair.style.display = 'block';
+  tutorial.style.display = 'block';
+  ajustarDimensoesDoCartao();
+  isFlipped = true;
+  resetTransform(0,0);
+  flipSound.currentTime = 0;
+  flipSound.play();
+}
+
+/* pointer handlers para o startScreen (devem vir APÓS declaração das constantes) */
+startScreen.addEventListener('pointerdown', (e) => {
+  // evita que o navegador interprete como gesto (scroll/zoom)
+  e.preventDefault();
+});
+startScreen.addEventListener('pointerup', (e) => abrirConvite());
 
 function resetTransform(rotateX = 0, rotateY = 0) {
 const flip = isFlipped ? "rotateY(360deg)" : "rotateY(180deg)";
@@ -204,96 +209,63 @@ resetTransform();
 img.src = cartao.querySelector('.frente').src;
 }
 
+/* ---------- touch handlers: 1 dedo move (se move), 1 dedo solta -> flip, 2 dedos -> zoom+pan ---------- */
 function getDistance(touches) {
-const dx = touches[0].clientX - touches[1].clientX;
-const dy = touches[0].clientY - touches[1].clientY;
-return Math.sqrt(dx * dx + dy * dy);
+  const dx = touches[0].clientX - touches[1].clientX;
+  const dy = touches[0].clientY - touches[1].clientY;
+  return Math.sqrt(dx*dx + dy*dy);
 }
 
-// Flip com 1 toque
-let touchStartX = 0;
-let touchStartY = 0;
-let touchMoved = false;
-let lastTouches = [];
+let touchStartX = 0, touchStartY = 0;
 
 escalaWrapper.addEventListener("touchstart", (e) => {
-    if (e.touches.length === 1) {
-        const t = e.touches[0];
-        touchStartX = t.clientX;
-        touchStartY = t.clientY;
-        touchMoved = false;
-    }
-
-    if (e.touches.length === 2) {
-        lastTouches = [...e.touches];
-    }
+  if (e.touches.length === 1) {
+    const t = e.touches[0];
+    touchStartX = t.clientX;
+    touchStartY = t.clientY;
+    touchMoved = false;
+  }
+  if (e.touches.length === 2) {
+    lastTouches = [...e.touches];
+    touchMoved = false;
+  }
 }, { passive: false });
 
 escalaWrapper.addEventListener("touchmove", (e) => {
-
-    // --- 1 DEDO: ARRASTANDO O CARTÃO --- //
-    if (e.touches.length === 1) {
-        const t = e.touches[0];
-
-        const dx = t.clientX - touchStartX;
-        const dy = t.clientY - touchStartY;
-
-        // detectar movimento real
-        if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
-            touchMoved = true;
-        }
-
-        posX += dx * 0.2;
-        posY += dy * 0.2;
-
-        touchStartX = t.clientX;
-        touchStartY = t.clientY;
-
-        resetTransform();
-    }
-
-    // --- 2 DEDOS: ZOOM + MOVE --- //
-    if (e.touches.length === 2 && lastTouches.length === 2) {
-        const currentDist = getDistance(e.touches);
-        const lastDist = getDistance(lastTouches);
-        const delta = currentDist - lastDist;
-
-        escalaZoom += delta * 0.005;
-        escalaZoom = Math.max(0.1, Math.min(escalaZoom, 5));
-
-        posX +=
-            (e.touches[0].clientX +
-                e.touches[1].clientX -
-                lastTouches[0].clientX -
-                lastTouches[1].clientX) * 0.25;
-
-        posY +=
-            (e.touches[0].clientY +
-                e.touches[1].clientY -
-                lastTouches[0].clientY -
-                lastTouches[1].clientY) * 0.25;
-
-        lastTouches = [...e.touches];
-        resetTransform();
-    }
-
+  if (e.touches.length === 1) {
+    const t = e.touches[0];
+    const dx = t.clientX - touchStartX;
+    const dy = t.clientY - touchStartY;
+    if (Math.abs(dx) > 5 || Math.abs(dy) > 5) touchMoved = true;
+    posX += dx * 0.22;
+    posY += dy * 0.22;
+    touchStartX = t.clientX;
+    touchStartY = t.clientY;
+    resetTransform();
+  }
+  if (e.touches.length === 2 && lastTouches.length === 2) {
+    const currentDist = getDistance(e.touches);
+    const lastDist = getDistance(lastTouches);
+    const delta = currentDist - lastDist;
+    escalaZoom += delta * 0.005;
+    escalaZoom = Math.max(0.1, Math.min(escalaZoom, 5));
+    posX += (e.touches[0].clientX + e.touches[1].clientX - lastTouches[0].clientX - lastTouches[1].clientX) * 0.25;
+    posY += (e.touches[0].clientY + e.touches[1].clientY - lastTouches[0].clientY - lastTouches[1].clientY) * 0.25;
+    lastTouches = [...e.touches];
+    resetTransform();
+  }
 }, { passive: false });
 
 escalaWrapper.addEventListener("touchend", (e) => {
-
-    // se nenhum dedo restante
-    if (e.touches.length === 0) {
-
-        // --- TOQUE SEM MOVER FAZ FLIP --- //
-        if (!touchMoved) {
-            isFlipped = !isFlipped;
-            resetTransform();
-
-            flipSound.currentTime = 0;
-            flipSound.play();
-        }
+  if (e.touches.length === 0) {
+    // se não houve movimento real -> flip
+    if (!touchMoved) {
+      isFlipped = !isFlipped;
+      resetTransform();
+      flipSound.currentTime = 0;
+      flipSound.play();
     }
-
+  }
 });
 
 
